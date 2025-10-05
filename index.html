@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API ile İşlem Yapma</title>
+</head>
+<body>
+    <h1>API Kullanımı</h1>
+
+    <?php
+    class API
+    {
+        public $api_url = 'https://www.like4like.org/api/v1/'; // API URL
+        public $api_key = '0dfd6858a0dceef241f5ef5700'; // API Key (Güncel Anahtar)
+
+        // Sipariş eklemek için fonksiyon
+        public function order($data) { 
+            $post = array_merge(array('key' => $this->api_key, 'action' => 'add'), $data);
+            return json_decode($this->connect($post));
+        }
+
+        // Sipariş durumu almak için fonksiyon
+        public function status($data) { 
+            $post = array_merge(array('key' => $this->api_key, 'action' => 'status'), $data);
+            return json_decode($this->connect($post));
+        }
+
+        // Bakiye almak için fonksiyon
+        public function balance() { 
+            return json_decode($this->connect(array(
+                'key' => $this->api_key,
+                'action' => 'balance',
+            )));
+        }
+
+        // API'ye bağlanmak için özel fonksiyon
+        private function connect($post) {
+            $_post = Array();
+            if (is_array($post)) {
+                foreach ($post as $name => $value) {
+                    if ($name == 'link') {
+                        $_post[] = $name.'='.urlencode(str_replace('&', '9ampersand9', $value));
+                    } else {
+                        $_post[] = $name.'='.urlencode($value);
+                    }
+                }
+            }
+
+            // cURL ile API'ye POST isteği gönderiyoruz
+            $ch = curl_init($this->api_url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            if (is_array($post)) {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, join('&', $_post));
+            }
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)');
+            $result = curl_exec($ch);
+            if (curl_errno($ch) != 0 && empty($result)) {
+                $result = false;
+            }
+            curl_close($ch);
+            return $result;
+        }
+    }
+
+    // API ile işlem yapma örneği
+    $api = new API();
+
+    // API bakiyesi alınıyor
+    $balance = $api->balance(); 
+    echo "<h2>API Bakiyesi:</h2>";
+    echo "<pre>";
+    print_r($balance); // API bakiyesini ekrana yazdır
+
+    // Yeni bir sipariş ekleniyor
+    $order = $api->order(array(
+        'service' => 1,
+        'link' => 'http://example.com/test',
+        'quantity' => 100,
+        'cpc' => 3,
+        'countries' => '7,12'
+    ));
+    echo "<h2>Yeni Sipariş:</h2>";
+    echo "<pre>";
+    print_r($order); // Siparişin sonucu
+
+    // Sipariş durumu kontrol ediliyor
+    $status = $api->status(array('service' => 1, 'order' => 15869)); 
+    echo "<h2>Sipariş Durumu:</h2>";
+    echo "<pre>";
+    print_r($status); // Sipariş durumu
+    ?>
+</body>
+</html>
